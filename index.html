@@ -1,1 +1,1014 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Velha - Minimax</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background: #111318;
+            color: white;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 30px;
+
+            display: flex;
+            gap: 30px;
+
+            background: #1b1e25;
+            border: 1px solid #30343d;
+            border-radius: 15px;
+        }
+
+        .jogo,
+        .painel-ia {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+        }
+
+        #status {
+            color: #7dd3fc;
+            font-weight: bold;
+        }
+
+        .dificuldades {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            font-family: inherit;
+        }
+
+        .dificuldades button {
+            padding: 8px 12px;
+            border: 1px solid #444a55;
+            border-radius: 7px;
+            background: #292d36;
+            color: white;
+            cursor: pointer;
+        }
+
+        .dificuldades button:hover {
+            background: #363b46;
+        }
+
+        .dificuldades button.ativo {
+            background: #2563eb;
+            border-color: #3b82f6;
+        }
+
+        .tabuleiro {
+            display: grid;
+            grid-template-columns: repeat(3, 85px);
+            grid-template-rows: repeat(3, 85px);
+            gap: 7px;
+            margin-bottom: 20px;
+        }
+
+        .casa {
+            width: 85px;
+            height: 85px;
+            border: 1px solid #454b57;
+            border-radius: 9px;
+            background: #252932;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .casa:hover:not(:disabled) {
+            background: #303540;
+        }
+
+        .casa:disabled {
+            cursor: default;
+        }
+
+        .placar {
+            width: 100%;
+            max-width: 270px;
+            padding: 12px;
+            margin-bottom: 15px;
+
+            text-align: center;
+
+            background: #15171c;
+            border: 1px solid #30343d;
+            border-radius: 9px;
+        }
+
+        .placar h2 {
+            margin: 0 0 8px;
+            font-size: 18px;
+        }
+
+        .placar p {
+            margin: 5px;
+        }
+
+        #placar-jogador {
+            color: #60a5fa;
+        }
+
+        #placar-ia {
+            color: #f87171;
+        }
+
+        #placar-empates {
+            color: #facc15;
+        }
+
+        .nova-partida {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 7px;
+            background: #2563eb;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .nova-partida:hover {
+            background: #1d4ed8;
+        }
+
+        .separador {
+            width: 1px;
+            background: #353a44;
+        }
+
+        #status-ia {
+            min-height: 20px;
+            color: #aaa;
+            text-align: center;
+        }
+
+        .neuronios {
+            position: relative;
+            width: min(100%, 400px);
+            aspect-ratio: 1;
+            background: #121419;
+            border: 1px solid #30343d;
+            border-radius: 12px;
+        }
+
+        .linhas-rede {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .linha {
+            stroke: rgba(180, 180, 200, 0.25);
+            stroke-width: 1;
+        }
+
+        .neuronio {
+            position: absolute;
+            width: 55px;
+            height: 55px;
+
+            transform: translate(-50%, -50%);
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            border: 2px solid white;
+            border-radius: 50%;
+
+            background: #3c3c46;
+            color: white;
+
+            font-size: 13px;
+            font-weight: bold;
+
+            transition: 0.2s;
+        }
+
+        .neuronio.ativo {
+            width: 65px;
+            height: 65px;
+            box-shadow: 0 0 18px rgba(255,255,255,.35);
+        }
+
+        .neuronio.escolhido {
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255,215,0,.6);
+        }
+
+        #neuronio-0 { left: 20%; top: 20%; }
+        #neuronio-1 { left: 50%; top: 20%; }
+        #neuronio-2 { left: 80%; top: 20%; }
+
+        #neuronio-3 { left: 20%; top: 50%; }
+        #neuronio-4 { left: 50%; top: 50%; }
+        #neuronio-5 { left: 80%; top: 50%; }
+
+        #neuronio-6 { left: 20%; top: 80%; }
+        #neuronio-7 { left: 50%; top: 80%; }
+        #neuronio-8 { left: 80%; top: 80%; }
+
+        .legenda {
+            color: #aaa;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        @media (max-width: 750px) {
+            body {
+                align-items: flex-start;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            .separador {
+                width: 100%;
+                height: 1px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .tabuleiro {
+                grid-template-columns: repeat(3, 70px);
+                grid-template-rows: repeat(3, 70px);
+            }
+
+            .casa {
+                width: 70px;
+                height: 70px;
+                font-size: 35px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="container">
+
+        <section class="jogo">
+
+            <h1>Jogo da Velha</h1>
+
+            <p id="status">Sua vez</p>
+
+            <div class="dificuldades">
+                <button id="botao-Facil" onclick="selecionarDificuldade('Facil')">
+                    Fácil
+                </button>
+
+                <button id="botao-Mediano" class="ativo" onclick="selecionarDificuldade('Mediano')">
+                    Mediano
+                </button>
+
+                <button id="botao-Dificil" onclick="selecionarDificuldade('Dificil')">
+                    Difícil
+                </button>
+
+                <button id="botao-Minimax" onclick="selecionarDificuldade('Minimax')">
+                    Minimax
+                </button>
+            </div>
+
+            <div class="tabuleiro">
+
+                <button class="casa" onclick="jogadaHumano(0)"></button>
+                <button class="casa" onclick="jogadaHumano(1)"></button>
+                <button class="casa" onclick="jogadaHumano(2)"></button>
+
+                <button class="casa" onclick="jogadaHumano(3)"></button>
+                <button class="casa" onclick="jogadaHumano(4)"></button>
+                <button class="casa" onclick="jogadaHumano(5)"></button>
+
+                <button class="casa" onclick="jogadaHumano(6)"></button>
+                <button class="casa" onclick="jogadaHumano(7)"></button>
+                <button class="casa" onclick="jogadaHumano(8)"></button>
+
+            </div>
+
+            <div class="placar">
+                <h2>Placar</h2>
+
+                <p>
+                    Jogador:
+                    <span id="placar-jogador">0</span>
+                </p>
+
+                <p>
+                    IA:
+                    <span id="placar-ia">0</span>
+                </p>
+
+                <p>
+                    Empates:
+                    <span id="placar-empates">0</span>
+                </p>
+            </div>
+
+            <button class="nova-partida" onclick="novaPartida()">
+                Nova partida
+            </button>
+
+        </section>
+
+        <div class="separador"></div>
+
+        <section class="painel-ia">
+
+            <h2>Pensamento da IA</h2>
+
+            <p id="status-ia">
+                Aguardando sua jogada...
+            </p>
+
+            <div class="neuronios">
+
+                <svg class="linhas-rede" viewBox="0 0 100 100">
+
+                    <line class="linha" x1="20" y1="20" x2="50" y2="20"/>
+                    <line class="linha" x1="50" y1="20" x2="80" y2="20"/>
+
+                    <line class="linha" x1="20" y1="50" x2="50" y2="50"/>
+                    <line class="linha" x1="50" y1="50" x2="80" y2="50"/>
+
+                    <line class="linha" x1="20" y1="80" x2="50" y2="80"/>
+                    <line class="linha" x1="50" y1="80" x2="80" y2="80"/>
+
+                    <line class="linha" x1="20" y1="20" x2="20" y2="50"/>
+                    <line class="linha" x1="20" y1="50" x2="20" y2="80"/>
+
+                    <line class="linha" x1="50" y1="20" x2="50" y2="50"/>
+                    <line class="linha" x1="50" y1="50" x2="50" y2="80"/>
+
+                    <line class="linha" x1="80" y1="20" x2="80" y2="50"/>
+                    <line class="linha" x1="80" y1="50" x2="80" y2="80"/>
+
+                    <line class="linha" x1="20" y1="20" x2="50" y2="50"/>
+                    <line class="linha" x1="50" y1="50" x2="80" y2="80"/>
+
+                    <line class="linha" x1="80" y1="20" x2="50" y2="50"/>
+                    <line class="linha" x1="50" y1="50" x2="20" y2="80"/>
+
+                </svg>
+
+                <div class="neuronio" id="neuronio-0">?</div>
+                <div class="neuronio" id="neuronio-1">?</div>
+                <div class="neuronio" id="neuronio-2">?</div>
+
+                <div class="neuronio" id="neuronio-3">?</div>
+                <div class="neuronio" id="neuronio-4">?</div>
+                <div class="neuronio" id="neuronio-5">?</div>
+
+                <div class="neuronio" id="neuronio-6">?</div>
+                <div class="neuronio" id="neuronio-7">?</div>
+                <div class="neuronio" id="neuronio-8">?</div>
+
+            </div>
+
+            <p class="legenda">
+                Vermelho = ruim | Verde = bom | Dourado = escolhida
+            </p>
+
+        </section>
+
+    </main>
+
+    <script>
+
+        const HUMANO = "X";
+        const IA = "O";
+
+        const DIFICULDADES = {
+            Facil: 0.75,
+            Mediano: 0.40,
+            Dificil: 0.15,
+            Minimax: 0
+        };
+
+        const COMBINACOES = [
+            [0,1,2],
+            [3,4,5],
+            [6,7,8],
+            [0,3,6],
+            [1,4,7],
+            [2,5,8],
+            [0,4,8],
+            [2,4,6]
+        ];
+
+        let tabuleiro = ["","","","","","","","",""];
+        let dificuldade = "Mediano";
+        let jogoAtivo = true;
+
+        let placarJogador = 0;
+        let placarIA = 0;
+        let placarEmpates = 0;
+
+        let partida = 0;
+
+        function verificarVencedor(tab) {
+
+            for (const combinacao of COMBINACOES) {
+
+                const [a,b,c] = combinacao;
+
+                if (
+                    tab[a] !== "" &&
+                    tab[a] === tab[b] &&
+                    tab[a] === tab[c]
+                ) {
+                    return tab[a];
+                }
+            }
+
+            return null;
+        }
+
+        function tabuleiroCheio(tab) {
+            return !tab.includes("");
+        }
+
+        function minimax(tab, profundidade, maximizando) {
+
+            const vencedor = verificarVencedor(tab);
+
+            if (vencedor === IA) {
+                return 10 - profundidade;
+            }
+
+            if (vencedor === HUMANO) {
+                return profundidade - 10;
+            }
+
+            if (tabuleiroCheio(tab)) {
+                return 0;
+            }
+
+            if (maximizando) {
+
+                let melhor = -Infinity;
+
+                for (let i = 0; i < 9; i++) {
+
+                    if (tab[i] === "") {
+
+                        tab[i] = IA;
+
+                        const pontuacao =
+                            minimax(
+                                tab,
+                                profundidade + 1,
+                                false
+                            );
+
+                        tab[i] = "";
+
+                        melhor = Math.max(
+                            melhor,
+                            pontuacao
+                        );
+                    }
+                }
+
+                return melhor;
+
+            } else {
+
+                let pior = Infinity;
+
+                for (let i = 0; i < 9; i++) {
+
+                    if (tab[i] === "") {
+
+                        tab[i] = HUMANO;
+
+                        const pontuacao =
+                            minimax(
+                                tab,
+                                profundidade + 1,
+                                true
+                            );
+
+                        tab[i] = "";
+
+                        pior = Math.min(
+                            pior,
+                            pontuacao
+                        );
+                    }
+                }
+
+                return pior;
+            }
+        }
+
+        function melhorJogada() {
+
+            let melhorPosicao = null;
+            let melhorPontuacao = -Infinity;
+            const avaliacoes = [];
+
+            for (let i = 0; i < 9; i++) {
+
+                if (tabuleiro[i] === "") {
+
+                    tabuleiro[i] = IA;
+
+                    const pontuacao =
+                        minimax(
+                            tabuleiro,
+                            0,
+                            false
+                        );
+
+                    tabuleiro[i] = "";
+
+                    avaliacoes.push({
+                        posicao: i,
+                        pontuacao: pontuacao
+                    });
+
+                    if (pontuacao > melhorPontuacao) {
+
+                        melhorPontuacao = pontuacao;
+                        melhorPosicao = i;
+                    }
+                }
+            }
+
+            return {
+                melhorPosicao,
+                avaliacoes
+            };
+        }
+
+        function escolherJogada(melhor, avaliacoes) {
+
+            if (
+                Math.random() <
+                DIFICULDADES[dificuldade]
+            ) {
+
+                const outras =
+                    avaliacoes
+                        .map(a => a.posicao)
+                        .filter(p => p !== melhor);
+
+                if (outras.length) {
+                    return outras[
+                        Math.floor(
+                            Math.random() *
+                            outras.length
+                        )
+                    ];
+                }
+            }
+
+            return melhor;
+        }
+
+        function jogadaHumano(posicao) {
+
+            if (
+                !jogoAtivo ||
+                tabuleiro[posicao] !== ""
+            ) {
+                return;
+            }
+
+            tabuleiro[posicao] = HUMANO;
+
+            atualizarTabuleiro();
+
+            if (fimDeJogo()) {
+                return;
+            }
+
+            document.getElementById("status")
+                .textContent = "Vez da IA";
+
+            travarTabuleiro(true);
+
+            setTimeout(turnoIA, 300);
+        }
+
+        function turnoIA() {
+
+            if (!jogoAtivo) {
+                return;
+            }
+
+            const numero = partida;
+
+            const resultado = melhorJogada();
+
+            const posicao = escolherJogada(
+                resultado.melhorPosicao,
+                resultado.avaliacoes
+            );
+
+            iniciarAnalise();
+
+            document.getElementById("status-ia")
+                .textContent =
+                "Analisando jogadas...";
+
+            resultado.avaliacoes.forEach(
+                (avaliacao, indice) => {
+
+                    setTimeout(() => {
+
+                        if (numero !== partida) {
+                            return;
+                        }
+
+                        adicionarAvaliacao(
+                            avaliacao.posicao,
+                            avaliacao.pontuacao
+                        );
+
+                    }, 300 * (indice + 1));
+                }
+            );
+
+            setTimeout(() => {
+
+                if (numero !== partida) {
+                    return;
+                }
+
+                executarJogadaIA(
+                    posicao,
+                    resultado.avaliacoes
+                );
+
+            }, 300 * (
+                resultado.avaliacoes.length + 1
+            ));
+        }
+
+        function executarJogadaIA(
+            posicao,
+            avaliacoes
+        ) {
+
+            const avaliacao =
+                avaliacoes.find(
+                    a => a.posicao === posicao
+                );
+
+            const pontuacao =
+                avaliacao
+                    ? avaliacao.pontuacao
+                    : 0;
+
+            mostrarEscolha(
+                posicao,
+                pontuacao
+            );
+
+            tabuleiro[posicao] = IA;
+
+            atualizarTabuleiro();
+
+            if (fimDeJogo()) {
+                return;
+            }
+
+            document.getElementById("status")
+                .textContent = "Sua vez";
+
+            document.getElementById("status-ia")
+                .textContent =
+                "Aguardando sua jogada...";
+
+            travarTabuleiro(false);
+        }
+
+        function fimDeJogo() {
+
+            const vencedor =
+                verificarVencedor(tabuleiro);
+
+            if (vencedor === HUMANO) {
+
+                jogoAtivo = false;
+                placarJogador++;
+
+                document.getElementById("status")
+                    .textContent =
+                    "Você venceu!";
+
+                document.getElementById("status-ia")
+                    .textContent =
+                    "Você venceu a partida.";
+
+                atualizarPlacar();
+                travarTabuleiro(true);
+
+                setTimeout(
+                    () => alert("Você venceu!"),
+                    50
+                );
+
+                return true;
+            }
+
+            if (vencedor === IA) {
+
+                jogoAtivo = false;
+                placarIA++;
+
+                document.getElementById("status")
+                    .textContent =
+                    "A IA venceu!";
+
+                document.getElementById("status-ia")
+                    .textContent =
+                    "A IA venceu a partida.";
+
+                atualizarPlacar();
+                travarTabuleiro(true);
+
+                setTimeout(
+                    () => alert("A IA venceu!"),
+                    50
+                );
+
+                return true;
+            }
+
+            if (tabuleiroCheio(tabuleiro)) {
+
+                jogoAtivo = false;
+                placarEmpates++;
+
+                document.getElementById("status")
+                    .textContent =
+                    "Empate";
+
+                document.getElementById("status-ia")
+                    .textContent =
+                    "A partida terminou empatada.";
+
+                atualizarPlacar();
+                travarTabuleiro(true);
+
+                setTimeout(
+                    () => alert("Empate!"),
+                    50
+                );
+
+                return true;
+            }
+
+            return false;
+        }
+
+        function atualizarTabuleiro() {
+
+            const botoes =
+                document.querySelectorAll(".casa");
+
+            botoes.forEach(
+                (botao, i) => {
+                    botao.textContent =
+                        tabuleiro[i];
+                }
+            );
+        }
+
+        function travarTabuleiro(travado) {
+
+            document
+                .querySelectorAll(".casa")
+                .forEach((botao, i) => {
+
+                    botao.disabled =
+                        travado ||
+                        tabuleiro[i] !== "";
+                });
+        }
+
+        function atualizarPlacar() {
+
+            document.getElementById(
+                "placar-jogador"
+            ).textContent = placarJogador;
+
+            document.getElementById(
+                "placar-ia"
+            ).textContent = placarIA;
+
+            document.getElementById(
+                "placar-empates"
+            ).textContent = placarEmpates;
+        }
+
+        function novaPartida() {
+
+            partida++;
+
+            tabuleiro = [
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ];
+
+            jogoAtivo = true;
+
+            atualizarTabuleiro();
+            travarTabuleiro(false);
+
+            document.getElementById("status")
+                .textContent = "Sua vez";
+
+            document.getElementById("status-ia")
+                .textContent =
+                "Aguardando sua jogada...";
+
+            iniciarAnalise();
+        }
+
+        function selecionarDificuldade(nome) {
+
+            dificuldade = nome;
+
+            document
+                .querySelectorAll(
+                    ".dificuldades button"
+                )
+                .forEach(
+                    botao =>
+                    botao.classList.remove("ativo")
+                );
+
+            document.getElementById(
+                "botao-" + nome
+            ).classList.add("ativo");
+        }
+
+        function iniciarAnalise() {
+
+            for (let i = 0; i < 9; i++) {
+
+                const neuronio =
+                    document.getElementById(
+                        "neuronio-" + i
+                    );
+
+                neuronio.textContent = "?";
+
+                neuronio.style.background =
+                    "#3c3c46";
+
+                neuronio.classList.remove(
+                    "ativo",
+                    "escolhido"
+                );
+            }
+        }
+
+        function corParaPontuacao(pontuacao) {
+
+            let intensidade =
+                Math.max(
+                    -1,
+                    Math.min(
+                        1,
+                        pontuacao / 10
+                    )
+                );
+
+            if (intensidade >= 0) {
+
+                const valor =
+                    Math.round(
+                        255 *
+                        (1 - intensidade)
+                    );
+
+                return `rgb(
+                    ${valor},
+                    255,
+                    ${valor}
+                )`;
+            }
+
+            intensidade = -intensidade;
+
+            const valor =
+                Math.round(
+                    255 *
+                    (1 - intensidade)
+                );
+
+            return `rgb(
+                255,
+                ${valor},
+                ${valor}
+            )`;
+        }
+
+        function adicionarAvaliacao(
+            posicao,
+            pontuacao
+        ) {
+
+            const neuronio =
+                document.getElementById(
+                    "neuronio-" + posicao
+                );
+
+            neuronio.textContent =
+                pontuacao;
+
+            neuronio.style.background =
+                corParaPontuacao(
+                    pontuacao
+                );
+
+            document
+                .querySelectorAll(".neuronio")
+                .forEach(
+                    n =>
+                    n.classList.remove("ativo")
+                );
+
+            neuronio.classList.add("ativo");
+        }
+
+        function mostrarEscolha(
+            posicao,
+            pontuacao
+        ) {
+
+            document
+                .querySelectorAll(".neuronio")
+                .forEach(
+                    n =>
+                    n.classList.remove("ativo")
+                );
+
+            const neuronio =
+                document.getElementById(
+                    "neuronio-" + posicao
+                );
+
+            neuronio.classList.add(
+                "escolhido"
+            );
+
+            document.getElementById(
+                "status-ia"
+            ).textContent =
+                "Jogada escolhida: posição " +
+                posicao +
+                " | pontuação " +
+                pontuacao;
+        }
+
+        atualizarPlacar();
+        iniciarAnalise();
+
+    </script>
+
+</body>
+</html>
